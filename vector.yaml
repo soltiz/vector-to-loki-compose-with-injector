@@ -1,0 +1,48 @@
+sources:
+  tcp_logs:
+    type: socket
+    mode: tcp
+    address: 0.0.0.0:5170
+    encoding:
+      codec: text
+
+  vector_metrics:
+    type: internal_metrics
+
+
+transforms:
+  extract_marker:
+    type: remap
+    inputs:
+      - tcp_logs
+    source: >-
+     . |= parse_regex!(.message, r'_>(?P<marker>[^<]+)<_')
+sinks:
+  #printer:
+  #  type: console
+  #  inputs: 
+  #    - extract_marker
+  #  encoding:
+  #    codec: json
+
+  loki:
+    type: loki
+    inputs:
+      - extract_marker
+    endpoint: http://loki:3100
+    encoding:
+      codec: json
+    labels:
+      source: vector
+      marker: "{{marker}}"
+    buffer:
+    - type: disk
+      max_size: 1073741824 # 1GiB.
+      when_full: drop_newest
+
+  prometheus:
+    type: prometheus_exporter
+    address: 0.0.0.0:9598
+
+    inputs:
+      - vector_metrics

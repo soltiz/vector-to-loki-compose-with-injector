@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  minio:
+    image: quay.io/minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    volumes:
+      - minio_data:/data
+    networks:
+      - loki_network
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"  # API Loki
+    volumes:
+      - ./loki-config.yaml:/etc/loki/loki-config.yaml
+    command: -config.file=/etc/loki/loki-config.yaml
+    environment:
+      - LOKI_RING_KVSTORE_STORE=inmemory  # Force le ring en mémoire
+      - LOKI_RING_REPLICATION_FACTOR=1    # 1 seul nœud    
+    depends_on:
+      - minio
+    networks:
+      - loki_network
+
+  vector:
+    image: timberio/vector:latest-distroless-libc
+    ports:
+      - "5170:5170"  # Logs input
+      - "9598:9598"  # Prometheus exporter
+
+    volumes:
+      - ./vector.yaml:/etc/vector/vector.yaml
+      - /var/run/docker.sock:/var/run/docker.sock  # Pour lire les logs Docker
+    depends_on:
+      - loki
+    networks:
+      - loki_network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"  # Interface Grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana_datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yml
+
+    networks:
+      - loki_network
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin      # Utilisateur
+      - GF_SECURITY_ADMIN_PASSWORD=password  # Mot de passe
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+
+volumes:
+  minio_data:
+  grafana_data:
+
+networks:
+  loki_network:
+    driver: bridge

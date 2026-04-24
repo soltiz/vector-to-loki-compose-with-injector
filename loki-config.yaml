@@ -1,0 +1,33 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  http_listen_address: 0.0.0.0
+  
+common:
+  path_prefix: /loki
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1  # Adresse locale
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01  # Date de début du nouveau schéma
+      store: tsdb        # Obligatoire pour v13
+      object_store: s3   # Stockage S3 (MinIO)
+      schema: v13        # Schéma requis
+      index:
+        prefix: index_
+        period: 24h
+
+
+storage_config:
+  aws:
+    s3: s3://minio:9000
+    s3forcepathstyle: true                     # Requis pour MinIO
+    bucketnames: loki    
+    access_key_id: admin
+    secret_access_key: password
+    insecure: true             # Si MinIO sans TLS
