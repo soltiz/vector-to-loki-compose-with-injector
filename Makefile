@@ -6,15 +6,16 @@ start:
 	docker-compose up -d
 	mc alias set docker http://localhost:9000 admin password
 	mc mb docker/loki -p
+
+
+	# Waiting for loki to be starting. It can take up to a few minutes !!!!
+	while ! curl -s http://localhost.3100/ready | grep -q "^ready"; do sleep 2; done
+
 	@echo "Minio - http://localhost:9000"
 	@echo "Grafana -  http://localhost:3000"
 	@echo "Prometheus - http://localhost:9090"
 	@echo "Vector prometheus exporter- http://localhost:9598/metrics"
-
-	# Waiting for loki to be starting
-	while ! curl -s http://localhost.3100 | grep -q "^ready"; do sleep 2; done
-
-
+	
 
 
 health: loki_health minio_health
