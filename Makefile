@@ -72,3 +72,7 @@ minio_info:
 
 purge:
 	docker-compose down -v
+
+inject_error:
+	echo "mylog _>MARK1<_ kv:init=test,b1=1,b2=2,b3=3,b4=4,b5=5,b6=6,b7=7,b8=8,b9=9,b10=10,b11=11,b12=12,b13=13,b14=14,b15=15,b16=16" | nc localhost 5170 -w1 
+

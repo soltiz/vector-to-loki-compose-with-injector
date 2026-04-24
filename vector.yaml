@@ -16,14 +16,17 @@ transforms:
     inputs:
       - tcp_logs
     source: >-
-     . |= parse_regex!(.message, r'_>(?P<marker>[^<]+)<_')
+      . |= parse_regex!(.message, r'_>(?P<marker>[^<]+)<_');
+      kvp = parse_regex(.message, r'.kv:(?P<kv>.*)') ?? {};
+      .labels = parse_key_value(value: to_string!(kvp.kv), field_delimiter:",") ?? {"default":42}
+     
 sinks:
-  #printer:
-  #  type: console
-  #  inputs: 
-  #    - extract_marker
-  #  encoding:
-  #    codec: json
+  printer:
+    type: console
+    inputs: 
+      - extract_marker
+    encoding:
+      codec: json
 
   loki:
     type: loki
@@ -35,6 +38,7 @@ sinks:
     labels:
       source: vector
       marker: "{{marker}}"
+      "*": "{{labels}}"
     buffer:
     - type: disk
       max_size: 1073741824 # 1GiB.
